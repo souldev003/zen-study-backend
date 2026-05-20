@@ -24,8 +24,47 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    await client.connect();
     const db = client.db("zen-study");
     const roomsCollection = db.collection("rooms");
+
+    app.post("/rooms", async (req, res) => {
+      try {
+        const room = req.body;
+        const result = await roomsCollection.insertOne(room);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Room create failed" });
+      }
+    });
+
+    app.get("/rooms", async (req, res) => {
+      try {
+        const rooms = await client
+          .db("zen-study")
+          .collection("rooms")
+          .find()
+          .toArray();
+        res.send(rooms);
+      } catch (error) {
+        res.status(500).send({ message: "Rooms fetch failed" });
+      }
+    });
+
+    app.get("/latest-rooms", async (req, res) => {
+      try {
+        const rooms = await client
+          .db("zen-study")
+          .collection("rooms")
+          .find()
+          .sort({ createdAt: -1 })
+          .limit(6)
+          .toArray();
+        res.send(rooms);
+      } catch (error) {
+        res.status(500).send({ message: "Rooms fetch failed" });
+      }
+    });
 
     app.get("/rooms/:id", async (req, res) => {
       const { id } = req.params;
@@ -35,7 +74,6 @@ async function run() {
     });
 
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -50,34 +88,6 @@ run().catch(console.dir);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
-});
-
-app.get("/rooms", async (req, res) => {
-  try {
-    const rooms = await client
-      .db("zen-study")
-      .collection("rooms")
-      .find()
-      .toArray();
-    res.send(rooms);
-  } catch (error) {
-    res.status(500).send({ message: "Rooms fetch failed" });
-  }
-});
-
-app.get("/latest-rooms", async (req, res) => {
-  try {
-    const rooms = await client
-      .db("zen-study")
-      .collection("rooms")
-      .find()
-      .sort({ createdAt: -1 })
-      .limit(6)
-      .toArray();
-    res.send(rooms);
-  } catch (error) {
-    res.status(500).send({ message: "Rooms fetch failed" });
-  }
 });
 
 app.listen(port, () => {
