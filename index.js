@@ -73,6 +73,16 @@ async function run() {
       res.send(room);
     });
 
+    app.patch("/rooms/:id", async (req, res) => {
+      const { id } = req.params;
+      const room = req.body;
+      const result = await roomsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: room },
+      );
+      res.send(result);
+    });
+
     // Connect the client to the server	(optional starting in v4.7)
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
