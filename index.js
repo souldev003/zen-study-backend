@@ -6,7 +6,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.MONGODB_URI;
 const app = express();
 const port = process.env.PORT;
@@ -26,6 +26,13 @@ async function run() {
   try {
     const db = client.db("zen-study");
     const roomsCollection = db.collection("rooms");
+
+    app.get("/rooms/:id", async (req, res) => {
+      const { id } = req.params;
+
+      const room = await roomsCollection.findOne({ _id: new ObjectId(id) });
+      res.send(room);
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
