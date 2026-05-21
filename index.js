@@ -27,6 +27,7 @@ async function run() {
     await client.connect();
     const db = client.db("zen-study");
     const roomsCollection = db.collection("rooms");
+    const bookingsCollection = db.collection("bookings");
 
     app.post("/rooms", async (req, res) => {
       try {
@@ -89,6 +90,16 @@ async function run() {
         _id: new ObjectId(id),
       });
       res.send(result);
+    });
+
+    app.post("/bookings", async (req, res) => {
+      try {
+        const booking = req.body;
+        const result = await bookingsCollection.insertOne(booking);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Booking create failed" });
+      }
     });
 
     // Connect the client to the server	(optional starting in v4.7)
