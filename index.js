@@ -108,6 +108,33 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/bookings/:id/cancel", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const booking = await bookingsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!booking) {
+          return res.status(404).send({ message: "Booking not found" });
+        }
+
+        if (booking.status === "cancelled") {
+          return res.status(400).send({ message: "Already cancelled" });
+        }
+
+        const result = await bookingsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: "cancelled" } },
+        );
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Cancel failed" });
+      }
+    });
+
     // Connect the client to the server	(optional starting in v4.7)
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
