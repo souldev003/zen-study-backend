@@ -23,7 +23,9 @@ const client = new MongoClient(uri, {
   },
 });
 
-const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+const JWKS = createRemoteJWKSet(
+  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+);
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -50,7 +52,7 @@ const verifyToken = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db("zen-study");
     const roomsCollection = db.collection("rooms");
     const bookingsCollection = db.collection("bookings");
@@ -67,11 +69,19 @@ async function run() {
 
     app.get("/rooms", async (req, res) => {
       try {
-        const rooms = await client
-          .db("zen-study")
-          .collection("rooms")
-          .find()
-          .toArray();
+        const { search, ownerId } = req.query;
+
+        let query = {};
+
+        if (search) {
+          query.name = { $regex: search, $options: "i" };
+        }
+
+        if (ownerId) {
+          query.ownerId = ownerId; // IMPORTANT
+        }
+
+        const rooms = await roomsCollection.find(query).toArray();
         res.send(rooms);
       } catch (error) {
         res.status(500).send({ message: "Rooms fetch failed" });
@@ -94,7 +104,7 @@ async function run() {
     });
 
     //middleware
-    app.get("/rooms/:id", verifyToken, async (req, res) => {
+    app.get("/rooms/:id", async (req, res) => {
       const { id } = req.params;
 
       const room = await roomsCollection.findOne({ _id: new ObjectId(id) });
@@ -172,7 +182,7 @@ async function run() {
 
       res.send(result);
     });
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
