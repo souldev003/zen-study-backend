@@ -111,7 +111,7 @@ async function run() {
       res.send(room);
     });
 
-    app.patch("/rooms/:id", verifyToken, async (req, res) => {
+    app.patch("/rooms/:id", async (req, res) => {
       const { id } = req.params;
       const room = req.body;
       const result = await roomsCollection.updateOne(
