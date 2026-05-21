@@ -7,6 +7,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 const uri = process.env.MONGODB_URI;
 const app = express();
 const port = process.env.PORT;
@@ -21,6 +22,31 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized: No token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res
+      .status(401)
+      .send({ message: "Unauthorized: Invalid token format" });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    next();
+  } catch (error) {
+    return res.status(401).send({ message: "Unauthorized: Invalid token" });
+  }
+};
 
 async function run() {
   try {
@@ -67,14 +93,15 @@ async function run() {
       }
     });
 
-    app.get("/rooms/:id", async (req, res) => {
+    //middleware
+    app.get("/rooms/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
 
       const room = await roomsCollection.findOne({ _id: new ObjectId(id) });
       res.send(room);
     });
 
-    app.patch("/rooms/:id", async (req, res) => {
+    app.patch("/rooms/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const room = req.body;
       const result = await roomsCollection.updateOne(
@@ -84,7 +111,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/rooms/:id", async (req, res) => {
+    app.delete("/rooms/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const result = await roomsCollection.deleteOne({
         _id: new ObjectId(id),
@@ -102,13 +129,13 @@ async function run() {
       }
     });
 
-    app.get("/bookings/:userId", async (req, res) => {
+    app.get("/bookings/:userId", verifyToken, async (req, res) => {
       const { userId } = req.params;
       const result = await bookingsCollection.find({ userId }).toArray();
       res.send(result);
     });
 
-    app.patch("/bookings/:id/cancel", async (req, res) => {
+    app.patch("/bookings/:id/cancel", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
 
@@ -135,7 +162,7 @@ async function run() {
       }
     });
 
-    app.patch("/bookings/:id/confirm", async (req, res) => {
+    app.patch("/bookings/:id/confirm", verifyToken, async (req, res) => {
       const { id } = req.params;
 
       const result = await bookingsCollection.updateOne(
@@ -145,9 +172,6 @@ async function run() {
 
       res.send(result);
     });
-
-    // Connect the client to the server	(optional starting in v4.7)
-    // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
