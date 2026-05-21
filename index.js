@@ -135,6 +135,17 @@ async function run() {
       }
     });
 
+    app.patch("/bookings/:id/confirm", async (req, res) => {
+      const { id } = req.params;
+
+      const result = await bookingsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: "confirmed" } },
+      );
+
+      res.send(result);
+    });
+
     // Connect the client to the server	(optional starting in v4.7)
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
